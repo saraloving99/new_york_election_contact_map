@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>NY Board of Elections - Final Master Directory</title>
+    <title>NY Board of Elections - County Boundary Map</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
@@ -15,7 +15,6 @@
         .d-party { color: #0984e3; font-weight: 600; }
         .r-party { color: #d63031; font-weight: 600; }
         .staff-box { background: #f1f2f6; padding: 8px; border-radius: 6px; margin-top: 5px; font-size: 12px; }
-        .email { font-style: italic; color: #2d3436; font-size: 11px; }
     </style>
 </head>
 <body>
@@ -29,101 +28,134 @@
         const map = L.map('map').setView([42.9, -75.6], 7);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-        const markers = {};
+        const countyLayers = {}; // To store the shape layers for searching
+        
+        // Your existing data
         const fullData = [
-            { n: "Albany", lat: 42.65, lng: -73.75, addr: "224 S. Pearl St, Albany", ph: "(518) 487-5060", d: "Alison C. McLean Lane (alison.c.mcleanlane@albanycountyny.gov)", r: "Rachel L. Bledi (rachel.bledia@albanycountyny.gov)", depD: "David J. Cady", depR: "Melissa Kermani", staff: "Debora Banks-Turner (R) Administrator" },
-            { n: "Allegany", lat: 42.21, lng: -78.03, addr: "8 Willets Avenue, Belmont", ph: "(585) 268-9294", d: "Michael J. McCormick (mike.mccormick@alleganyco.gov)", r: "Brent L. Reynolds (brent.reynolds@alleganyco.gov)", depD: "Barbara Broughton (barbara.broughton@alleganyco.gov)", depR: "Marcy Crawford (marcy.crawford@alleganyco.gov)", staff: "" },
-            { n: "Bronx", lat: 40.84, lng: -73.86, addr: "1780 Grand Concourse", ph: "(718) 299-9017", d: "Jodi Morales (jmorales@boenyc.gov)", r: "Gino A. Marmorato (gmarmorato@boenyc.gov)", depD: "Brendaliz Candelaria (beandelaria@boenyc.gov)", depR: "Steven Guglielmi (sguglielmi@boenyc.gov)", staff: "Deputy Chief Clerks Phone: (718) 960-0730" },
-            { n: "Broome", lat: 42.10, lng: -75.91, addr: "60 Hawley St, Binghamton", ph: "(607) 778-2172", d: "Daniel D. Reynolds (daniel.d.reynolds@broomecountyny.gov)", r: "Mark E. Smith (mark.e.smith@broomecountyny.gov)", depD: "Christina M. Dutko (christina.dutko@broomecountyny.gov)", depR: "Joseph J. Bertoni (joe.bertoni@broomecountyny.gov)", staff: "Tech: J. MacGregor (D), P. Conroy (R); Ops: L. Cobb (D), S. Mandizha (R); Records/Service: M. Figura (R), M. Diaz (R), E. Figura (R)" },
-            { n: "Cattaraugus", lat: 42.25, lng: -78.79, addr: "207 Rock City St, Little Valley", ph: "(716) 938-2400", d: "Kevin C. Burleson (kcburlesona@cattco.org)", r: "Cortney L. Spittler (clspittler@cattco.org)", depD: "Laura D. Howard (Idhoward@cattco.org)", depR: "Danielle R. Wing (drwing@cattco.org)", staff: "Clerks: Colleen D. Stayer (R) (edstayer@cattco.org), Mandy Bushnell (D) (mibushnella@catteo.org)" },
-            { n: "Cayuga", lat: 42.93, lng: -76.56, addr: "157 Genesee St, Auburn", ph: "(315) 253-1285", d: "Keith Batman (D)", r: "Chantell Hotaling (R)", depD: "Katie Trojnor-Riley", depR: "Roberta Massarini", staff: "Email: elections@cayugacounty.gov" },
-            { n: "Chautauqua", lat: 42.23, lng: -79.31, addr: "7 North Erie St, Mayville", ph: "(716) 753-4580", d: "Luz E. Torres (torresl@chqgov.com)", r: "Nacole L. Ellis (ellisn@chqgov.com)", depD: "Christopher Burt (D)", depR: "Natalie Green (R)", staff: "Admins: Sarah Culver, Amber Eckstrom, Amanda Fox, Gabe Rosas" },
-            { n: "Chemung", lat: 42.09, lng: -76.80, addr: "378 S. Main St, Elmira", ph: "(607) 737-5475", d: "Mary M. Collins (marycollins@chemungcountyny.gov)", r: "Sperry J. Navone (snavone@chemungcountyny.gov)", depD: "Tina M. Kane (tkane@chemungcountyny.gov)", depR: "Marcy M. Thomas (mthomas@chemungcountyny.gov)", staff: "Admin Specs: Halie D. Saunders (D) (hsaunders@chemungcountyny.gov), Colleen P. Novotny (R) (enovotny@chemungcountyny.gov)" },
-            { n: "Chenango", lat: 42.53, lng: -75.52, addr: "5 Court St, Norwich", ph: "(607) 337-1764", d: "Carly J. Hendricks (chendricks@chenangocountyny.gov)", r: "Derik M. Williams (dwilliams@chenangocountyny.gov)", depD: "Ryan Hitt (rhitt@chenangocountyny.gov)", depR: "Kelsey Natoli (knatolia@chenangocountyny.gov)", staff: "Sr Clerk: Jacob Carniel (D) (jeamiel@chenangocountyny.gov)" },
-            { n: "Clinton", lat: 44.69, lng: -73.45, addr: "137 Margaret St, Plattsburgh", ph: "(518) 565-4740", d: "Mary R. Dyer (mary.dyer@clintoncountyny.gov)", r: "David J. Souliere IV (david.souliere@clintoncountyny.gov)", depD: "Melinda Guerin (melinda.guerin@clintoncountyny.gov)", depR: "Scott A. DuBrey (scott.dubrey@clintoncountyny.gov)", staff: "Email: boe@clintoncountyny.gov" },
-            { n: "Columbia", lat: 42.25, lng: -73.79, addr: "401 State St, Hudson", ph: "(518) 828-3115", d: "Mara H. Estribou (mara.estribou@columbiacountyny.gov)", r: "Kelly A. Miller-Simmons (kelly.miller-simmons@columbiacountyny.gov)", depD: "Denise Keegan (denise.keegan@columbiacountyny.gov)", depR: "Jody Nesbitt (jody.nesbitt@columbiacountyny.gov)", staff: "Specs: W. Blowers, J. Ciampoli, B. Slotter, R. Moore II" },
-            { n: "Cortland", lat: 42.60, lng: -76.17, addr: "112 River St, Cortland", ph: "(607) 753-5032", d: "Thomas H. Brown (tbrown@cortlandcountyny.gov)", r: "Michelle S. Phelps (mphelps@cortlandcountyny.gov)", depD: "Angela 1. Burchfield (aburchfield@cortlandcountyny.gov)", depR: "Karen A.C. Jenney (kjenney@cortlandcountyny.gov)", staff: "" },
-            { n: "Delaware", lat: 42.27, lng: -74.91, addr: "97 Main St, Delhi", ph: "(607) 832-5321", d: "Judith L. Garrison (judith.garrison@co.delaware.ny.us)", r: "Maria E. Kelso (maria.kelso@co.delaware.ny.us)", depD: "Paula Schermerhorn (paula.schermerhorn@co.delaware.ny.us)", depR: "Christine Boest (christine.boest@co.delaware.ny.us)", staff: "Website: www.co.delaware.ny.us" },
-            { n: "Dutchess", lat: 41.70, lng: -73.92, addr: "112 Delafield St, Poughkeepsie", ph: "(845) 486-2473", d: "Lisa Jessup (ljessup@dutchessny.gov)", r: "Erik J. Haight (chaight@dutchessny.gov)", depD: "Gillian Smith (gsmith@dutchessny.gov)", depR: "Erin E. Reverri (ereverri@dutchessny.gov)", staff: "Email: dutchesselections@dutchessny.gov" },
-            { n: "Erie", lat: 42.88, lng: -78.87, addr: "134 W. Eagle St, Buffalo", ph: "(716) 858-8891", d: "Jeremy J. Zellner (jeremy.zellner@erie.gov)", r: "Ralph M. Mohr (ralph.mohr@eric.gov)", depD: "Howard Johnson", depR: "Robin L. Sion", staff: "" },
-            { n: "Essex", lat: 44.22, lng: -73.59, addr: "7551 Court St, Elizabethtown", ph: "(518) 873-3474", d: "Mary McGowan (mary.megowan@essexcountyny.gov)", r: "Roy Holzer (roy.holzer@essexcountyny.gov)", depD: "Jennifer L. Fifield (jennifer.fifield@essexcountyny.gov)", depR: "Krista Moran (krista.moran@essexcountyny.gov)", staff: "Email: elections@essexcountyny.gov" },
-            { n: "Franklin", lat: 44.85, lng: -74.29, addr: "355 West Main St, Malone", ph: "(518) 481-1663", d: "Brandon John Varin (Brandon.John.Varin@franklincountyny.gov)", r: "Tracy Sparks (Tracy.Sparks@franklincountyny.gov)", depD: "Eric Barney (Eric.Barney@franklincountyny.gov)", depR: "Bridget Furman (Bridget.Furman@franklincountyny.gov)", staff: "" },
-            { n: "Fulton", lat: 43.01, lng: -74.34, addr: "2714 St. Hwy 29, Johnstown", ph: "(518) 736-5526", d: "Robin Wentworth (rwentworth@fultoncountyny.gov)", r: "William E. Eschler (beschler@fultoncountyny.gov)", depD: "Rebecca Weiderman (rweiderman@fultoncountyny.gov)", depR: "Cinda J. Spraker (cspraker@fultoncountyny.gov)", staff: "Sr Clerks: Cheyenna Malagisi (R), Joy Beekman (D)" },
-            { n: "Genesee", lat: 43.00, lng: -78.18, addr: "15 Main St, Batavia", ph: "(585) 815-7804", d: "Lorie J. Longhany (lorie.longhany@geneseeny.gov)", r: "Scott D. German (scott.german@geneseeny.gov)", depD: "Karen S. Gannon (karen.gannon@geneseeny.gov)", depR: "Melissa L. Gaebler (melissa.gaebler@geneseeny.gov)", staff: "Email: election@geneseeny.gov" },
-            { n: "Greene", lat: 42.22, lng: -73.86, addr: "411 Main St, Catskill", ph: "(518) 719-3550", d: "Deborah A. Fromer (dfromer@greenecountyny.gov)", r: "Brent Bogardus (bbogardus@greenecountyny.gov)", depD: "Rebecca Cinatti (rcinatti@greenecountyny.gov)", depR: "Elisa Schieren (eschieren@greenecountyny.gov)", staff: "Email: elections@greenecountyny.gov" },
-            { n: "Hamilton", lat: 43.48, lng: -74.42, addr: "102 County View Dr", ph: "(518) 548-4684", d: "Jade Sherman (jsherman@hamiltoncountyny.gov)", r: "Gail P. Teal (gteal@hamiltoncountyny.gov)", depD: "", depR: "", staff: "" },
-            { n: "Herkimer", lat: 43.03, lng: -74.99, addr: "109 Mary St, Herkimer", ph: "(315) 867-1102", d: "Robert J. Hoyt (rhoyt@herkimercountyny.gov)", r: "Teresa L. Robotham (trobotham@herkimercountyny.gov)", depD: "Jon Karaffa (jkaraffa@herkimercountyny.gov)", depR: "Cody Keeler (ckeeler@herkimercountyny.gov)", staff: "" },
-            { n: "Jefferson", lat: 43.98, lng: -75.92, addr: "175 Arsenal St, Watertown", ph: "(315) 785-3027", d: "Michelle R. LaFave (mlafave@jeffersoncountyny.gov)", r: "Tiffany E. Ladd (tladd@jeffersoncountyny.gov)", depD: "Tammy Gollaher (tgollaher@jeffersoncountyny.gov)", depR: "Heather Chaffee (hchaffee@jeffersoncountyny.gov)", staff: "" },
-            { n: "Kings", lat: 40.69, lng: -73.99, addr: "345 Adams St, Brooklyn", ph: "(718) 797-8800", d: "Frank R. Seddio (fseddiola@boenye.gov)", r: "Simon Shamoun (sshamoun@boenyc.gov)", depD: "Daniel Ortiz (dortizaboenyc.gov)", depR: "Salvatore Barrera (sbarrera@boenyc.gov)", staff: "" },
-            { n: "Lewis", lat: 43.79, lng: -75.49, addr: "7660 North State St, Lowville", ph: "(315) 376-5329", d: "Lindsay Burriss (lindsayburriss@lewiscounty.ny.gov)", r: "Ramona Carpenter (ramonacarpenter@lewiscounty.ny.gov)", depD: "Hannah Wilson (hannahwilson@lewiscounty.ny.gov)", depR: "Devin C. Kogut (devinkogut@lewiscounty.ny.gov)", staff: "" },
-            { n: "Livingston", lat: 42.79, lng: -77.82, addr: "6 Court St, Geneseo", ph: "(585) 243-7090", d: "David M. DiPasquale (daviddipasquale@livingstoncountyny.gov)", r: "Gary J. Nageldinger (garynageldinger@livingstoncountyny.gov)", depD: "Amanda M. Coniglio (amandaconiglio@livingstoncountyny.gov)", depR: "Alicia Strain (aliciastrain@livingstoncountyny.gov)", staff: "" },
-            { n: "Madison", lat: 43.01, lng: -75.61, addr: "138 N. Court St, Wampsville", ph: "(315) 366-2231", d: "Laura A. Martino (laura.martino@madisoncounty.ny.gov)", r: "Mary F. Egger (mary.egger@madisoncounty.ny.gov)", depD: "Maggie D. Conley (margaret.conley@madisoncounty.ny.gov)", depR: "Kathy R. Slade (kathy.slade@madisoncounty.ny.gov)", staff: "Sr Clerk: Bonny Matthews (R)" },
-            { n: "Monroe", lat: 43.16, lng: -77.62, addr: "435 Smith St, Rochester", ph: "(585) 753-1550", d: "Jackie Ortiz (jackieortiz@monroecounty.gov)", r: "Peter D. Elder (peldera@monroecounty.gov)", depD: "Natalie Sheppard (nataliesheppard@monroecounty.gov)", depR: "David W. Reilich (dreilich@monroecounty.gov)", staff: "Email: mcboe@monroecounty.gov" },
-            { n: "Montgomery", lat: 42.93, lng: -74.36, addr: "9 Park St, Fonda", ph: "(518) 853-8181", d: "Caroline A. Swartz (cswartz@co.montgomery.ny.us)", r: "Shawnna M. Weaver (sweaver@co.montgomery.ny.us)", depD: "Jessica Daniels (jdaniels@co.montgomery.ny.us)", depR: "Violet Capece (veapecea.co.montgomery.ny.us)", staff: "" },
-            { n: "Nassau", lat: 40.74, lng: -73.64, addr: "240 Old Country Rd, Mineola", ph: "(516) 571-8683", d: "James P. Scheuerman (jscheuerman@nassaucountyny.gov)", r: "James V. Moriarty (jmoriarty@nassaucountyny.gov)", depD: "", depR: "", staff: "Clerks: D. Nogid (D), J. V. Ra (R)" },
-            { n: "New York", lat: 40.73, lng: -74.00, addr: "200 Varick St, New York", ph: "(212) 886-2100", d: "Marc A. Landis (mlandis@boenye.gov)", r: "Frederic M. Umane (fumanea@boenyc.gov)", depD: "Rhonda Evans (revansa@boenyc.gov)", depR: "Stephen M. Evans, III (sevansa@boenyc.gov)", staff: "" },
-            { n: "Niagara", lat: 43.18, lng: -78.69, addr: "111 Main St, Lockport", ph: "(716) 438-4040", d: "Lora A. Allen (lora.allen@niagaracounty.com)", r: "Jennifer A. Sandonato (jennifer.sandonato@niagaracounty.com)", depD: "", depR: "Michael P. Carney (michael.carney@niagaracounty.com)", staff: "" },
-            { n: "Oneida", lat: 43.11, lng: -75.23, addr: "321 Main St, Utica", ph: "(315) 798-5765", d: "Sarah F. Bormann (sbormann@oneidacountyny.gov)", r: "Nichole D. Shortell (nshortell@oneidacountyny.gov)", depD: "Clarence A. Farrier (efarrier@oncidacountyny.gov)", depR: "Sharie Fiorini-Parsons (sfiorini-parsons@oneidacountyny.gov)", staff: "" },
-            { n: "Onondaga", lat: 43.05, lng: -76.15, addr: "1000 Erie Blvd W, Syracuse", ph: "(315) 435-8683", d: "Dustin M. Czarny (dustinczarny@ongov.net)", r: "Kevin P. Ryan (kevinryana@ongov.net)", depD: "Desiree LaFave (desireclafave@ongov.net)", depR: "Nicole Walsh (nicolewalsh@ongov.net)", staff: "Email: elections@ongov.net" },
-            { n: "Ontario", lat: 42.89, lng: -77.29, addr: "74 Ontario St, Canandaigua", ph: "(585) 396-4005", d: "Albert J. (AJ) Magnan (albert.magnan@ontariocountyny.gov)", r: "Adeline C. Rudolph (adeline.rudolph@ontariocountyny.gov)", depD: "Elizabeth J. Yockel (elizabeth.yockel@ontariocountyny.gov)", depR: "Sarabeth Miller (sarabeth.miller@ontariocountyny.gov)", staff: "" },
-            { n: "Orange", lat: 41.36, lng: -74.33, addr: "75 Webster Ave, Goshen", ph: "(845) 360-6500", d: "Louise R. Vandemark (Ivandemarka@orangecountygov.com)", r: "Courtney Canfield Greene (ccanfielda@orangecountygov.com)", depD: "Susan McDonald", depR: "Chandler Campbell", staff: "Extensive Specialist Staff Roster (20+ Names)" },
-            { n: "Orleans", lat: 43.25, lng: -78.20, addr: "14016 State Rt 31, Albion", ph: "(585) 589-3274", d: "Janice E. Grabowski (janice.grabowski@orleanscountyny.gov)", r: "Michael Mele (mike.mele@orleanscountyny.gov)", depD: "Abby Fitzwater (abby.fitzwater@orleanscountyny.gov)", depR: "Christine Pask (christine.paska@orleanscountyny.gov)", staff: "" },
-            { n: "Oswego", lat: 43.46, lng: -76.51, addr: "74 Bunner St, Oswego", ph: "(315) 349-8350", d: "Matthew Fleming (matt.fleming@oswegocountyny.gov)", r: "Stacy Teifke (stacy.teifke@oswegocountyny.gov)", depD: "Crystal Hutchinson", depR: "Marianne Ingerson", staff: "Specs: E. Iaria, M. Shepard; Clerks: S. Potter, K. Baldwin, S. Pettit, A. Lockwood" },
-            { n: "Otsego", lat: 42.71, lng: -74.93, addr: "140 County Hwy 33W, Cooperstown", ph: "(607) 547-4247", d: "Michael Henrici (henricim@otsegocountyny.gov)", r: "Lori L. Lehenbauer (lehenbauerl@otsegocountyny.gov)", depD: "Cora Dawson", depR: "Christina Morrison", staff: "" },
-            { n: "Putnam", lat: 41.42, lng: -73.69, addr: "25 Old Route 6, Carmel", ph: "(845) 808-1300", d: "Catherine P. Croft (catherine.croft@putnamcountyny.gov)", r: "Kelly K. Primavera (kelly.primavera@putnamcountyny.gov)", depD: "Andrea Basli (andrea.basli@putnamcountyny.gov)", depR: "Barbara A. Corrao (barbara.corrao@putnamcountyny.gov)", staff: "" },
-            { n: "Queens", lat: 40.72, lng: -73.84, addr: "118-35 Queens Blvd, Forest Hills", ph: "(718) 730-6730", d: "Jose M. Araujo (jaraujo@boenyc.gov)", r: "Keith Sullivan (ksullivana@boenyc.gov)", depD: "Amanda Berinato (aberinatoa@boenyc.gov)", depR: "Bart J. Haggerty (bhaggerty@boenye.gov)", staff: "" },
-            { n: "Rensselaer", lat: 42.74, lng: -73.70, addr: "1600 Seventh Ave, Troy", ph: "(518) 270-2990", d: "Mary E. Sweeney (msweeney@renscony.gov)", r: "Henry F. Zwack (hzwack@renscony.gov)", depD: "Kimberly A. Nielsen", depR: "Nicole A. Ruffinen", staff: "Registrars: Schneider, Whittemore, McDermott, McDonough, Ciccarelli" },
-            { n: "Richmond", lat: 40.65, lng: -74.08, addr: "1 Edgewater Plaza, Staten Island", ph: "(718) 876-0079", d: "Michele A. Sileo (msileo@boenyc.gov)", r: "Michael J. Coppotelli (mcoppotelli@boenyc.gov)", depD: "Daniel P. Lavelle (dlavelle@boenyc.gov)", depR: "Anthony J. Andriulli (aandriullia@boenyc.gov)", staff: "" },
-            { n: "Rockland", lat: 41.15, lng: -74.00, addr: "11 New Hempstead Rd, New City", ph: "(845) 638-5172", d: "Allison Weinraub (weinraua@co.rockland.ny.us)", r: "Patricia A. Giblin (giblinpa.co.rockland.ny.us)", depD: "Michelle Reilly (reillyma@co.rockland.ny.us)", depR: "Marino Fontana (fontanam@co.rockland.ny.us)", staff: "" },
-            { n: "St. Lawrence", lat: 44.60, lng: -75.17, addr: "80 State Hwy 310, Canton", ph: "(315) 379-2202", d: "Jennie H. Bacon (jbacon@stlawco.gov)", r: "Thomas A. Nichols (tnichols@stlawco.gov)", depD: "Gordon L. Ward, IV (gward@stlawco.gov)", depR: "Jesse M. Sovie (jsovie@stlawco.gov)", staff: "" },
-            { n: "Saratoga", lat: 43.01, lng: -73.85, addr: "50 West High St, Ballston Spa", ph: "(518) 885-2249", d: "Cassandra M. Bagramian (cbagramian@saratogacountyny.gov)", r: "Joseph J. Suhrada (jsuhrada@saratogacountyny.gov)", depD: "Samuel J. Olsen (solsen@saratogacountyny.gov)", depR: "Jennifer M. Weaver (jmweaver@saratogacountyny.gov)", staff: "" },
-            { n: "Schenectady", lat: 42.80, lng: -73.97, addr: "2696 Hamburg St, Schenectady", ph: "(518) 377-2469", d: "Laura Fronk (laura.fronk@schenectadycountyny.gov)", r: "Darlene D. Harris (darlene.harris@schenectadycountyny.gov)", depD: "Cindy Vincitore (cynthia.vincitore@schenectadycountyny.gov)", depR: "Loretta L. Rigney (loretta.rigney@schenectadycountyny.gov)", staff: "" },
-            { n: "Schoharie", lat: 42.67, lng: -74.32, addr: "284 Main St, Schoharie", ph: "(518) 295-8326", d: "N/A", r: "Kenneth J. Schweigard (kenneth.schweigard@co.schoharie.ny.us)", depD: "Sara E. Masterson (sara.masterson@co.schoharie.ny.us)", depR: "Benjamin E. Cooper (cooper.b@co.schoharie.ny.us)", staff: "" },
-            { n: "Schuyler", lat: 42.39, lng: -76.88, addr: "105 9th St, Watkins Glen", ph: "(607) 535-8195", d: "Brian T. Eslinger (beslinger@schuylercountyny.gov)", r: "Joseph Fazzary (joefazzary@schuylercountyny.gov)", depD: "Ali LaMoreaux (alamoreaux@schuylercountyny.gov)", depR: "Kristina A. Vondracek (kvondracek@schuylercountyny.gov)", staff: "" },
-            { n: "Seneca", lat: 42.92, lng: -76.87, addr: "One Di Pronio Dr, Waterloo", ph: "(315) 539-1760", d: "Carl J. Same (csame@co.seneca.ny.us)", r: "Tiffany S. Folk (tfolk@co.seneca.ny.us)", depD: "Heidi C. Conley (hconley@co.seneca.ny.us)", depR: "Kristofer Fisher (kfisher@co.seneca.ny.us)", staff: "" },
-            { n: "Steuben", lat: 42.34, lng: -77.33, addr: "3 E. Pulteney Sq, Bath", ph: "(607) 664-2240", d: "Colleen Hauryski (chauryski@steubencountyny.gov)", r: "Veronica (Vicky) L. Olin (volin@steubencountyny.gov)", depD: "Chad M. Cleland (ccleland@steubencountyny.gov)", depR: "Angie Cornish (acornish@steubencountyny.gov)", staff: "" },
-            { n: "Suffolk", lat: 40.83, lng: -72.94, addr: "Yaphank Ave, Yaphank", ph: "(631) 852-4500", d: "John Alberts (john.alberts@suffolkcountyny.gov)", r: "Erin McTiernan (erin.mctiernan@suffolkcountyny.gov)", depD: "Gail M. Lolis (gaillolis2@suffolkcountyny.gov)", depR: "Maureen Getchell (maureen.getchella@suffolkcountyny.gov)", staff: "Assts: J. Anthony, P. Giambruno, G. Herr, B. Manzella; IT: V. Kumar" },
-            { n: "Sullivan", lat: 41.66, lng: -74.69, addr: "100 North St, Monticello", ph: "(845) 807-0400", d: "Deanna M. Senyk (deanna.senyk@sullivanny.gov)", r: "Pamela D. Murran (pamela.murran@sullivanny.gov)", depD: "Erica D. Heins (erica.heins@sullivanny.gov)", depR: "Cheyenne L. Foster (cheyenne.foster2@sullivanny.gov)", staff: "" },
-            { n: "Tioga", lat: 42.11, lng: -76.27, addr: "1062 State Route 38, Owego", ph: "(607) 687-8261", d: "James C.E. Wahls (wahlsj@tiogacountyny.gov)", r: "Kelly A. Johnson (johnsonk@tiogacountyny.gov)", depD: "Amber Duke (dukeaa@tiogacountyny.gov)", depR: "James Hoover (hooverj@tiogacountyny.gov)", staff: "" },
-            { n: "Tompkins", lat: 42.45, lng: -76.50, addr: "128 East Buffalo St, Ithaca", ph: "(607) 274-5521", d: "Stephen M. DeWitt (sdewitt@tompkins-co.org)", r: "Alanna C.H. Congdon (acongdon@tompkins-co.org)", depD: "Elizabeth Livesay (elivesay@tompkins-co.org)", depR: "Diane Orlowski (dorlowski@tompkins-co.org)", staff: "" },
-            { n: "Ulster", lat: 41.94, lng: -74.00, addr: "79 Hurley Ave, Kingston", ph: "(845) 334-5470", d: "Ashley Torres (adit@ulstercountyny.gov)", r: "John P. Quigley (joqu@ulstercountyny.gov)", depD: "Jen Bloom (jfue@ulstercountyny.gov)", depR: "Keri L. Williams (kmll@ulstercountyny.gov)", staff: "" },
-            { n: "Warren", lat: 43.43, lng: -73.69, addr: "1340 State Rt 9, Lake George", ph: "(518) 761-6456", d: "Elizabeth J. McLaughlin (melaughlinba@warrencountyny.gov)", r: "Harold Hubbard (hubbardha@warrencountyny.gov)", depD: "Kimberly Ross (rossk@warrencountyny.gov)", depR: "Caroline Clesceri (clescerica@warrencountyny.gov)", staff: "Email: boe@warrencountyny.gov" },
-            { n: "Washington", lat: 43.27, lng: -73.59, addr: "1153 Burgoyne Ave, Fort Edward", ph: "(518) 746-2180", d: "Jeffrey J. Curtis (jeurtis@washingtoncountyny.gov)", r: "Stacey Baker (shaker@washingtoncountyny.gov)", depD: "Melinda Suprenant (msuprenant@washingtoncountyny.gov)", depR: "Elizabeth Ashley Skogsberg (eskogsberg@washingtoncountyny.gov)", staff: "" },
-            { n: "Wayne", lat: 43.07, lng: -77.00, addr: "7376 State Rt 31, Lyons", ph: "(315) 946-7400", d: "Kristin L. Victorious (klvictorious@waynecountyny.gov)", r: "Mindy L. Robinson (mrobinson@waynecountyny.gov)", depD: "Ryan Brotons (rbrotons@waynecountyny.gov)", depR: "Betty Rose Chardeen (bchardeen@waynecountyny.gov)", staff: "" },
-            { n: "Westchester", lat: 41.04, lng: -73.77, addr: "445 Hamilton Ave, White Plains", ph: "(914) 995-5700", d: "Tajian M. Nelson (taj1@westchestercountyny.gov)", r: "Douglas A. Colety (dac7@westchestercountyny.gov)", depD: "Frank S. Corvino (fsc3@westchestercountyny.gov)", depR: "Christine A. Sculti (casy@westchestercountyny.gov)", staff: "" },
-            { n: "Wyoming", lat: 42.75, lng: -78.14, addr: "4 Perry Avenue, Warsaw", ph: "(585) 786-8931", d: "Harold J. Bush (hbush@wyomingcountyny.gov)", r: "James Schlick (jeschlick@yahoo.com)", depD: "Candy Salmon (csalmon@wyomingcountyny.gov)", depR: "Alicia J. Brunner (abrunner@wyomingcountyny.gov)", staff: "" },
-            { n: "Yates", lat: 42.67, lng: -77.06, addr: "417 Liberty St, Penn Yan", ph: "(315) 536-5135", d: "Robert F. Brechko (robert.brechko@yatescountyny.gov)", r: "Sheila M. Burt (sheila.burt@yatescountyny.gov)", depD: "Ruth (Toad) Bouchard (ruth.bouchard@yatescountyny.gov)", depR: "Sandy J. Burt (sandy.burt@yatescountyny.gov)", staff: "" }
+            { n: "Albany", addr: "224 S. Pearl St, Albany", ph: "(518) 487-5060", d: "Alison C. McLean Lane (alison.c.mcleanlane@albanycountyny.gov)", r: "Rachel L. Bledi (rachel.bledia@albanycountyny.gov)", depD: "David J. Cady", depR: "Melissa Kermani", staff: "Debora Banks-Turner (R) Administrator" },
+            { n: "Allegany", addr: "8 Willets Avenue, Belmont", ph: "(585) 268-9294", d: "Michael J. McCormick (mike.mccormick@alleganyco.gov)", r: "Brent L. Reynolds (brent.reynolds@alleganyco.gov)", depD: "Barbara Broughton (barbara.broughton@alleganyco.gov)", depR: "Marcy Crawford (marcy.crawford@alleganyco.gov)", staff: "" },
+            { n: "Bronx", addr: "1780 Grand Concourse", ph: "(718) 299-9017", d: "Jodi Morales (jmorales@boenyc.gov)", r: "Gino A. Marmorato (gmarmorato@boenyc.gov)", depD: "Brendaliz Candelaria (beandelaria@boenyc.gov)", depR: "Steven Guglielmi (sguglielmi@boenyc.gov)", staff: "Deputy Chief Clerks Phone: (718) 960-0730" },
+            { n: "Broome", addr: "60 Hawley St, Binghamton", ph: "(607) 778-2172", d: "Daniel D. Reynolds (daniel.d.reynolds@broomecountyny.gov)", r: "Mark E. Smith (mark.e.smith@broomecountyny.gov)", depD: "Christina M. Dutko (christina.dutko@broomecountyny.gov)", depR: "Joseph J. Bertoni (joe.bertoni@broomecountyny.gov)", staff: "Tech: J. MacGregor (D), P. Conroy (R); Ops: L. Cobb (D), S. Mandizha (R); Records/Service: M. Figura (R), M. Diaz (R), E. Figura (R)" },
+            { n: "Cattaraugus", addr: "207 Rock City St, Little Valley", ph: "(716) 938-2400", d: "Kevin C. Burleson (kcburlesona@cattco.org)", r: "Cortney L. Spittler (clspittler@cattco.org)", depD: "Laura D. Howard (Idhoward@cattco.org)", depR: "Danielle R. Wing (drwing@cattco.org)", staff: "Clerks: Colleen D. Stayer (R) (edstayer@cattco.org), Mandy Bushnell (D) (mibushnella@catteo.org)" },
+            { n: "Cayuga", addr: "157 Genesee St, Auburn", ph: "(315) 253-1285", d: "Keith Batman (D)", r: "Chantell Hotaling (R)", depD: "Katie Trojnor-Riley", depR: "Roberta Massarini", staff: "Email: elections@cayugacounty.gov" },
+            { n: "Chautauqua", addr: "7 North Erie St, Mayville", ph: "(716) 753-4580", d: "Luz E. Torres (torresl@chqgov.com)", r: "Nacole L. Ellis (ellisn@chqgov.com)", depD: "Christopher Burt (D)", depR: "Natalie Green (R)", staff: "Admins: Sarah Culver, Amber Eckstrom, Amanda Fox, Gabe Rosas" },
+            { n: "Chemung", addr: "378 S. Main St, Elmira", ph: "(607) 737-5475", d: "Mary M. Collins (marycollins@chemungcountyny.gov)", r: "Sperry J. Navone (snavone@chemungcountyny.gov)", depD: "Tina M. Kane (tkane@chemungcountyny.gov)", depR: "Marcy M. Thomas (mthomas@chemungcountyny.gov)", staff: "Admin Specs: Halie D. Saunders (D) (hsaunders@chemungcountyny.gov), Colleen P. Novotny (R) (enovotny@chemungcountyny.gov)" },
+            { n: "Chenango", addr: "5 Court St, Norwich", ph: "(607) 337-1764", d: "Carly J. Hendricks (chendricks@chenangocountyny.gov)", r: "Derik M. Williams (dwilliams@chenangocountyny.gov)", depD: "Ryan Hitt (rhitt@chenangocountyny.gov)", depR: "Kelsey Natoli (knatolia@chenangocountyny.gov)", staff: "Sr Clerk: Jacob Carniel (D) (jeamiel@chenangocountyny.gov)" },
+            { n: "Clinton", addr: "137 Margaret St, Plattsburgh", ph: "(518) 565-4740", d: "Mary R. Dyer (mary.dyer@clintoncountyny.gov)", r: "David J. Souliere IV (david.souliere@clintoncountyny.gov)", depD: "Melinda Guerin (melinda.guerin@clintoncountyny.gov)", depR: "Scott A. DuBrey (scott.dubrey@clintoncountyny.gov)", staff: "Email: boe@clintoncountyny.gov" },
+            { n: "Columbia", addr: "401 State St, Hudson", ph: "(518) 828-3115", d: "Mara H. Estribou (mara.estribou@columbiacountyny.gov)", r: "Kelly A. Miller-Simmons (kelly.miller-simmons@columbiacountyny.gov)", depD: "Denise Keegan (denise.keegan@columbiacountyny.gov)", depR: "Jody Nesbitt (jody.nesbitt@columbiacountyny.gov)", staff: "Specs: W. Blowers, J. Ciampoli, B. Slotter, R. Moore II" },
+            { n: "Cortland", addr: "112 River St, Cortland", ph: "(607) 753-5032", d: "Thomas H. Brown (tbrown@cortlandcountyny.gov)", r: "Michelle S. Phelps (mphelps@cortlandcountyny.gov)", depD: "Angela 1. Burchfield (aburchfield@cortlandcountyny.gov)", depR: "Karen A.C. Jenney (kjenney@cortlandcountyny.gov)", staff: "" },
+            { n: "Delaware", addr: "97 Main St, Delhi", ph: "(607) 832-5321", d: "Judith L. Garrison (judith.garrison@co.delaware.ny.us)", r: "Maria E. Kelso (maria.kelso@co.delaware.ny.us)", depD: "Paula Schermerhorn (paula.schermerhorn@co.delaware.ny.us)", depR: "Christine Boest (christine.boest@co.delaware.ny.us)", staff: "Website: www.co.delaware.ny.us" },
+            { n: "Dutchess", addr: "112 Delafield St, Poughkeepsie", ph: "(845) 486-2473", d: "Lisa Jessup (ljessup@dutchessny.gov)", r: "Erik J. Haight (chaight@dutchessny.gov)", depD: "Gillian Smith (gsmith@dutchessny.gov)", depR: "Erin E. Reverri (ereverri@dutchessny.gov)", staff: "Email: dutchesselections@dutchessny.gov" },
+            { n: "Erie", addr: "134 W. Eagle St, Buffalo", ph: "(716) 858-8891", d: "Jeremy J. Zellner (jeremy.zellner@erie.gov)", r: "Ralph M. Mohr (ralph.mohr@eric.gov)", depD: "Howard Johnson", depR: "Robin L. Sion", staff: "" },
+            { n: "Essex", addr: "7551 Court St, Elizabethtown", ph: "(518) 873-3474", d: "Mary McGowan (mary.megowan@essexcountyny.gov)", r: "Roy Holzer (roy.holzer@essexcountyny.gov)", depD: "Jennifer L. Fifield (jennifer.fifield@essexcountyny.gov)", depR: "Krista Moran (krista.moran@essexcountyny.gov)", staff: "Email: elections@essexcountyny.gov" },
+            { n: "Franklin", addr: "355 West Main St, Malone", ph: "(518) 481-1663", d: "Brandon John Varin (Brandon.John.Varin@franklincountyny.gov)", r: "Tracy Sparks (Tracy.Sparks@franklincountyny.gov)", depD: "Eric Barney (Eric.Barney@franklincountyny.gov)", depR: "Bridget Furman (Bridget.Furman@franklincountyny.gov)", staff: "" },
+            { n: "Fulton", addr: "2714 St. Hwy 29, Johnstown", ph: "(518) 736-5526", d: "Robin Wentworth (rwentworth@fultoncountyny.gov)", r: "William E. Eschler (beschler@fultoncountyny.gov)", depD: "Rebecca Weiderman (rweiderman@fultoncountyny.gov)", depR: "Cinda J. Spraker (cspraker@fultoncountyny.gov)", staff: "Sr Clerks: Cheyenna Malagisi (R), Joy Beekman (D)" },
+            { n: "Genesee", addr: "15 Main St, Batavia", ph: "(585) 815-7804", d: "Lorie J. Longhany (lorie.longhany@geneseeny.gov)", r: "Scott D. German (scott.german@geneseeny.gov)", depD: "Karen S. Gannon (karen.gannon@geneseeny.gov)", depR: "Melissa L. Gaebler (melissa.gaebler@geneseeny.gov)", staff: "Email: election@geneseeny.gov" },
+            { n: "Greene", addr: "411 Main St, Catskill", ph: "(518) 719-3550", d: "Deborah A. Fromer (dfromer@greenecountyny.gov)", r: "Brent Bogardus (bbogardus@greenecountyny.gov)", depD: "Rebecca Cinatti (rcinatti@greenecountyny.gov)", depR: "Elisa Schieren (eschieren@greenecountyny.gov)", staff: "Email: elections@greenecountyny.gov" },
+            { n: "Hamilton", addr: "102 County View Dr", ph: "(518) 548-4684", d: "Jade Sherman (jsherman@hamiltoncountyny.gov)", r: "Gail P. Teal (gteal@hamiltoncountyny.gov)", depD: "", depR: "", staff: "" },
+            { n: "Herkimer", addr: "109 Mary St, Herkimer", ph: "(315) 867-1102", d: "Robert J. Hoyt (rhoyt@herkimercountyny.gov)", r: "Teresa L. Robotham (trobotham@herkimercountyny.gov)", depD: "Jon Karaffa (jkaraffa@herkimercountyny.gov)", depR: "Cody Keeler (ckeeler@herkimercountyny.gov)", staff: "" },
+            { n: "Jefferson", addr: "175 Arsenal St, Watertown", ph: "(315) 785-3027", d: "Michelle R. LaFave (mlafave@jeffersoncountyny.gov)", r: "Tiffany E. Ladd (tladd@jeffersoncountyny.gov)", depD: "Tammy Gollaher (tgollaher@jeffersoncountyny.gov)", depR: "Heather Chaffee (hchaffee@jeffersoncountyny.gov)", staff: "" },
+            { n: "Kings", addr: "345 Adams St, Brooklyn", ph: "(718) 797-8800", d: "Frank R. Seddio (fseddiola@boenye.gov)", r: "Simon Shamoun (sshamoun@boenyc.gov)", depD: "Daniel Ortiz (dortizaboenyc.gov)", depR: "Salvatore Barrera (sbarrera@boenyc.gov)", staff: "" },
+            { n: "Lewis", addr: "7660 North State St, Lowville", ph: "(315) 376-5329", d: "Lindsay Burriss (lindsayburriss@lewiscounty.ny.gov)", r: "Ramona Carpenter (ramonacarpenter@lewiscounty.ny.gov)", depD: "Hannah Wilson (hannahwilson@lewiscounty.ny.gov)", depR: "Devin C. Kogut (devinkogut@lewiscounty.ny.gov)", staff: "" },
+            { n: "Livingston", addr: "6 Court St, Geneseo", ph: "(585) 243-7090", d: "David M. DiPasquale (daviddipasquale@livingstoncountyny.gov)", r: "Gary J. Nageldinger (garynageldinger@livingstoncountyny.gov)", depD: "Amanda M. Coniglio (amandaconiglio@livingstoncountyny.gov)", depR: "Alicia Strain (aliciastrain@livingstoncountyny.gov)", staff: "" },
+            { n: "Madison", addr: "138 N. Court St, Wampsville", ph: "(315) 366-2231", d: "Laura A. Martino (laura.martino@madisoncounty.ny.gov)", r: "Mary F. Egger (mary.egger@madisoncounty.ny.gov)", depD: "Maggie D. Conley (margaret.conley@madisoncounty.ny.gov)", depR: "Kathy R. Slade (kathy.slade@madisoncounty.ny.gov)", staff: "Sr Clerk: Bonny Matthews (R)" },
+            { n: "Monroe", addr: "435 Smith St, Rochester", ph: "(585) 753-1550", d: "Jackie Ortiz (jackieortiz@monroecounty.gov)", r: "Peter D. Elder (peldera@monroecounty.gov)", depD: "Natalie Sheppard (nataliesheppard@monroecounty.gov)", depR: "David W. Reilich (dreilich@monroecounty.gov)", staff: "Email: mcboe@monroecounty.gov" },
+            { n: "Montgomery", addr: "9 Park St, Fonda", ph: "(518) 853-8181", d: "Caroline A. Swartz (cswartz@co.montgomery.ny.us)", r: "Shawnna M. Weaver (sweaver@co.montgomery.ny.us)", depD: "Jessica Daniels (jdaniels@co.montgomery.ny.us)", depR: "Violet Capece (veapecea.co.montgomery.ny.us)", staff: "" },
+            { n: "Nassau", addr: "240 Old Country Rd, Mineola", ph: "(516) 571-8683", d: "James P. Scheuerman (jscheuerman@nassaucountyny.gov)", r: "James V. Moriarty (jmoriarty@nassaucountyny.gov)", depD: "", depR: "", staff: "Clerks: D. Nogid (D), J. V. Ra (R)" },
+            { n: "New York", addr: "200 Varick St, New York", ph: "(212) 886-2100", d: "Marc A. Landis (mlandis@boenye.gov)", r: "Frederic M. Umane (fumanea@boenyc.gov)", depD: "Rhonda Evans (revansa@boenyc.gov)", depR: "Stephen M. Evans, III (sevansa@boenyc.gov)", staff: "" },
+            { n: "Niagara", addr: "111 Main St, Lockport", ph: "(716) 438-4040", d: "Lora A. Allen (lora.allen@niagaracounty.com)", r: "Jennifer A. Sandonato (jennifer.sandonato@niagaracounty.com)", depD: "", depR: "Michael P. Carney (michael.carney@niagaracounty.com)", staff: "" },
+            { n: "Oneida", addr: "321 Main St, Utica", ph: "(315) 798-5765", d: "Sarah F. Bormann (sbormann@oneidacountyny.gov)", r: "Nichole D. Shortell (nshortell@oneidacountyny.gov)", depD: "Clarence A. Farrier (efarrier@oncidacountyny.gov)", depR: "Sharie Fiorini-Parsons (sfiorini-parsons@oneidacountyny.gov)", staff: "" },
+            { n: "Onondaga", addr: "1000 Erie Blvd W, Syracuse", ph: "(315) 435-8683", d: "Dustin M. Czarny (dustinczarny@ongov.net)", r: "Kevin P. Ryan (kevinryana@ongov.net)", depD: "Desiree LaFave (desireclafave@ongov.net)", depR: "Nicole Walsh (nicolewalsh@ongov.net)", staff: "Email: elections@ongov.net" },
+            { n: "Ontario", addr: "74 Ontario St, Canandaigua", ph: "(585) 396-4005", d: "Albert J. (AJ) Magnan (albert.magnan@ontariocountyny.gov)", r: "Adeline C. Rudolph (adeline.rudolph@ontariocountyny.gov)", depD: "Elizabeth J. Yockel (elizabeth.yockel@ontariocountyny.gov)", depR: "Sarabeth Miller (sarabeth.miller@ontariocountyny.gov)", staff: "" },
+            { n: "Orange", addr: "75 Webster Ave, Goshen", ph: "(845) 360-6500", d: "Louise R. Vandemark (Ivandemarka@orangecountygov.com)", r: "Courtney Canfield Greene (ccanfielda@orangecountygov.com)", depD: "Susan McDonald", depR: "Chandler Campbell", staff: "Extensive Specialist Staff Roster" },
+            { n: "Orleans", addr: "14016 State Rt 31, Albion", ph: "(585) 589-3274", d: "Janice E. Grabowski (janice.grabowski@orleanscountyny.gov)", r: "Michael Mele (mike.mele@orleanscountyny.gov)", depD: "Abby Fitzwater (abby.fitzwater@orleanscountyny.gov)", depR: "Christine Pask (christine.paska@orleanscountyny.gov)", staff: "" },
+            { n: "Oswego", addr: "74 Bunner St, Oswego", ph: "(315) 349-8350", d: "Matthew Fleming (matt.fleming@oswegocountyny.gov)", r: "Stacy Teifke (stacy.teifke@oswegocountyny.gov)", depD: "Crystal Hutchinson", depR: "Marianne Ingerson", staff: "Specs: E. Iaria, M. Shepard; Clerks: S. Potter, K. Baldwin, S. Pettit, A. Lockwood" },
+            { n: "Otsego", addr: "140 County Hwy 33W, Cooperstown", ph: "(607) 547-4247", d: "Michael Henrici (henricim@otsegocountyny.gov)", r: "Lori L. Lehenbauer (lehenbauerl@otsegocountyny.gov)", depD: "Cora Dawson", depR: "Christina Morrison", staff: "" },
+            { n: "Putnam", addr: "25 Old Route 6, Carmel", ph: "(845) 808-1300", d: "Catherine P. Croft (catherine.croft@putnamcountyny.gov)", r: "Kelly K. Primavera (kelly.primavera@putnamcountyny.gov)", depD: "Andrea Basli (andrea.basli@putnamcountyny.gov)", depR: "Barbara A. Corrao (barbara.corrao@putnamcountyny.gov)", staff: "" },
+            { n: "Queens", addr: "118-35 Queens Blvd, Forest Hills", ph: "(718) 730-6730", d: "Jose M. Araujo (jaraujo@boenyc.gov)", r: "Keith Sullivan (ksullivana@boenyc.gov)", depD: "Amanda Berinato (aberinatoa@boenyc.gov)", depR: "Bart J. Haggerty (bhaggerty@boenye.gov)", staff: "" },
+            { n: "Rensselaer", addr: "1600 Seventh Ave, Troy", ph: "(518) 270-2990", d: "Mary E. Sweeney (msweeney@renscony.gov)", r: "Henry F. Zwack (hzwack@renscony.gov)", depD: "Kimberly A. Nielsen", depR: "Nicole A. Ruffinen", staff: "Registrars: Schneider, Whittemore, McDermott, McDonough, Ciccarelli" },
+            { n: "Richmond", addr: "1 Edgewater Plaza, Staten Island", ph: "(718) 876-0079", d: "Michele A. Sileo (msileo@boenyc.gov)", r: "Michael J. Coppotelli (mcoppotelli@boenyc.gov)", depD: "Daniel P. Lavelle (dlavelle@boenyc.gov)", depR: "Anthony J. Andriulli (aandriullia@boenyc.gov)", staff: "" },
+            { n: "Rockland", addr: "11 New Hempstead Rd, New City", ph: "(845) 638-5172", d: "Allison Weinraub (weinraua@co.rockland.ny.us)", r: "Patricia A. Giblin (giblinpa.co.rockland.ny.us)", depD: "Michelle Reilly (reillyma@co.rockland.ny.us)", depR: "Marino Fontana (fontanam@co.rockland.ny.us)", staff: "" },
+            { n: "St. Lawrence", addr: "80 State Hwy 310, Canton", ph: "(315) 379-2202", d: "Jennie H. Bacon (jbacon@stlawco.gov)", r: "Thomas A. Nichols (tnichols@stlawco.gov)", depD: "Gordon L. Ward, IV (gward@stlawco.gov)", depR: "Jesse M. Sovie (jsovie@stlawco.gov)", staff: "" },
+            { n: "Saratoga", addr: "50 West High St, Ballston Spa", ph: "(518) 885-2249", d: "Cassandra M. Bagramian (cbagramian@saratogacountyny.gov)", r: "Joseph J. Suhrada (jsuhrada@saratogacountyny.gov)", depD: "Samuel J. Olsen (solsen@saratogacountyny.gov)", depR: "Jennifer M. Weaver (jmweaver@saratogacountyny.gov)", staff: "" },
+            { n: "Schenectady", addr: "2696 Hamburg St, Schenectady", ph: "(518) 377-2469", d: "Laura Fronk (laura.fronk@schenectadycountyny.gov)", r: "Darlene D. Harris (darlene.harris@schenectadycountyny.gov)", depD: "Cindy Vincitore (cynthia.vincitore@schenectadycountyny.gov)", depR: "Loretta L. Rigney (loretta.rigney@schenectadycountyny.gov)", staff: "" },
+            { n: "Schoharie", addr: "284 Main St, Schoharie", ph: "(518) 295-8326", d: "N/A", r: "Kenneth J. Schweigard (kenneth.schweigard@co.schoharie.ny.us)", depD: "Sara E. Masterson (sara.masterson@co.schoharie.ny.us)", depR: "Benjamin E. Cooper (cooper.b@co.schoharie.ny.us)", staff: "" },
+            { n: "Schuyler", addr: "105 9th St, Watkins Glen", ph: "(607) 535-8195", d: "Brian T. Eslinger (beslinger@schuylercountyny.gov)", r: "Joseph Fazzary (joefazzary@schuylercountyny.gov)", depD: "Ali LaMoreaux (alamoreaux@schuylercountyny.gov)", depR: "Kristina A. Vondracek (kvondracek@schuylercountyny.gov)", staff: "" },
+            { n: "Seneca", addr: "One Di Pronio Dr, Waterloo", ph: "(315) 539-1760", d: "Carl J. Same (csame@co.seneca.ny.us)", r: "Tiffany S. Folk (tfolk@co.seneca.ny.us)", depD: "Heidi C. Conley (hconley@co.seneca.ny.us)", depR: "Kristofer Fisher (kfisher@co.seneca.ny.us)", staff: "" },
+            { n: "Steuben", addr: "3 E. Pulteney Sq, Bath", ph: "(607) 664-2240", d: "Colleen Hauryski (chauryski@steubencountyny.gov)", r: "Veronica (Vicky) L. Olin (volin@steubencountyny.gov)", depD: "Chad M. Cleland (ccleland@steubencountyny.gov)", depR: "Angie Cornish (acornish@steubencountyny.gov)", staff: "" },
+            { n: "Suffolk", addr: "Yaphank Ave, Yaphank", ph: "(631) 852-4500", d: "John Alberts (john.alberts@suffolkcountyny.gov)", r: "Erin McTiernan (erin.mctiernan@suffolkcountyny.gov)", depD: "Gail M. Lolis (gaillolis2@suffolkcountyny.gov)", depR: "Maureen Getchell (maureen.getchella@suffolkcountyny.gov)", staff: "Assts: J. Anthony, P. Giambruno, G. Herr, B. Manzella; IT: V. Kumar" },
+            { n: "Sullivan", addr: "100 North St, Monticello", ph: "(845) 807-0400", d: "Deanna M. Senyk (deanna.senyk@sullivanny.gov)", r: "Pamela D. Murran (pamela.murran@sullivanny.gov)", depD: "Erica D. Heins (erica.heins@sullivanny.gov)", depR: "Cheyenne L. Foster (cheyenne.foster2@sullivanny.gov)", staff: "" },
+            { n: "Tioga", addr: "1062 State Route 38, Owego", ph: "(607) 687-8261", d: "James C.E. Wahls (wahlsj@tiogacountyny.gov)", r: "Kelly A. Johnson (johnsonk@tiogacountyny.gov)", depD: "Amber Duke (dukeaa@tiogacountyny.gov)", depR: "James Hoover (hooverj@tiogacountyny.gov)", staff: "" },
+            { n: "Tompkins", addr: "128 East Buffalo St, Ithaca", ph: "(607) 274-5521", d: "Stephen M. DeWitt (sdewitt@tompkins-co.org)", r: "Alanna C.H. Congdon (acongdon@tompkins-co.org)", depD: "Elizabeth Livesay (elivesay@tompkins-co.org)", depR: "Diane Orlowski (dorlowski@tompkins-co.org)", staff: "" },
+            { n: "Ulster", addr: "79 Hurley Ave, Kingston", ph: "(845) 334-5470", d: "Ashley Torres (adit@ulstercountyny.gov)", r: "John P. Quigley (joqu@ulstercountyny.gov)", depD: "Jen Bloom (jfue@ulstercountyny.gov)", depR: "Keri L. Williams (kmll@ulstercountyny.gov)", staff: "" },
+            { n: "Warren", addr: "1340 State Rt 9, Lake George", ph: "(518) 761-6456", d: "Elizabeth J. McLaughlin (melaughlinba@warrencountyny.gov)", r: "Harold Hubbard (hubbardha@warrencountyny.gov)", depD: "Kimberly Ross (rossk@warrencountyny.gov)", depR: "Caroline Clesceri (clescerica@warrencountyny.gov)", staff: "Email: boe@warrencountyny.gov" },
+            { n: "Washington", addr: "1153 Burgoyne Ave, Fort Edward", ph: "(518) 746-2180", d: "Jeffrey J. Curtis (jeurtis@washingtoncountyny.gov)", r: "Stacey Baker (shaker@washingtoncountyny.gov)", depD: "Melinda Suprenant (msuprenant@washingtoncountyny.gov)", depR: "Elizabeth Ashley Skogsberg (eskogsberg@washingtoncountyny.gov)", staff: "" },
+            { n: "Wayne", addr: "7376 State Rt 31, Lyons", ph: "(315) 946-7400", d: "Kristin L. Victorious (klvictorious@waynecountyny.gov)", r: "Mindy L. Robinson (mrobinson@waynecountyny.gov)", depD: "Ryan Brotons (rbrotons@waynecountyny.gov)", depR: "Betty Rose Chardeen (bchardeen@waynecountyny.gov)", staff: "" },
+            { n: "Westchester", addr: "445 Hamilton Ave, White Plains", ph: "(914) 995-5700", d: "Tajian M. Nelson (taj1@westchestercountyny.gov)", r: "Douglas A. Colety (dac7@westchestercountyny.gov)", depD: "Frank S. Corvino (fsc3@westchestercountyny.gov)", depR: "Christine A. Sculti (casy@westchestercountyny.gov)", staff: "" },
+            { n: "Wyoming", addr: "4 Perry Avenue, Warsaw", ph: "(585) 786-8931", d: "Harold J. Bush (hbush@wyomingcountyny.gov)", r: "James Schlick (jeschlick@yahoo.com)", depD: "Candy Salmon (csalmon@wyomingcountyny.gov)", depR: "Alicia J. Brunner (abrunner@wyomingcountyny.gov)", staff: "" },
+            { n: "Yates", addr: "417 Liberty St, Penn Yan", ph: "(315) 536-5135", d: "Robert F. Brechko (robert.brechko@yatescountyny.gov)", r: "Sheila M. Burt (sheila.burt@yatescountyny.gov)", depD: "Ruth (Toad) Bouchard (ruth.bouchard@yatescountyny.gov)", depR: "Sandy J. Burt (sandy.burt@yatescountyny.gov)", staff: "" }
         ];
 
-        fullData.forEach(item => {
-            const marker = L.marker([item.lat, item.lng]).addTo(map)
-                .bindPopup(`
-                    <div class="popup-card">
-                        <h3>${item.n} County</h3>
-                        <span class="section-header">Commissioners</span>
-                        <div class="d-party"><b>D:</b> ${item.d}</div>
-                        <div class="r-party"><b>R:</b> ${item.r}</div>
-                        <span class="section-header">Deputies</span>
-                        <div class="d-party"><b>D:</b> ${item.depD || 'N/A'}</div>
-                        <div class="r-party"><b>R:</b> ${item.depR || 'N/A'}</div>
-                        ${item.staff ? `<span class="section-header">Administrative Staff</span><div class="staff-box">${item.staff}</div>` : ''}
-                        <hr>
-                        📍 ${item.addr}<br>
-                        📞 ${item.ph}
-                    </div>
-                `);
-            markers[item.n.toLowerCase()] = marker;
-        });
+        // Fetch the boundary data (GeoJSON)
+        fetch("https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/new-york-counties.geojson")
+            .then(res => res.json())
+            .then(geoData => {
+                L.geoJSON(geoData, {
+                    style: {
+                        color: "#0984e3",
+                        weight: 2,
+                        fillColor: "#0984e3",
+                        fillOpacity: 0.1
+                    },
+                    onEachFeature: function(feature, layer) {
+                        const countyName = feature.properties.name;
+                        // Find the matching data in your directory
+                        const item = fullData.find(d => d.n === countyName);
+                        
+                        if (item) {
+                            layer.bindPopup(`
+                                <div class="popup-card">
+                                    <h3>${item.n} County</h3>
+                                    <span class="section-header">Commissioners</span>
+                                    <div class="d-party"><b>D:</b> ${item.d}</div>
+                                    <div class="r-party"><b>R:</b> ${item.r}</div>
+                                    <span class="section-header">Deputies</span>
+                                    <div class="d-party"><b>D:</b> ${item.depD || 'N/A'}</div>
+                                    <div class="r-party"><b>R:</b> ${item.depR || 'N/A'}</div>
+                                    ${item.staff ? `<span class="section-header">Administrative Staff</span><div class="staff-box">${item.staff}</div>` : ''}
+                                    <hr>
+                                    📍 ${item.addr}<br>
+                                    📞 ${item.ph}
+                                </div>
+                            `);
+                            
+                            // Store layer reference for search
+                            countyLayers[countyName.toLowerCase()] = layer;
+                        }
 
+                        // Hover effects
+                        layer.on({
+                            mouseover: (e) => {
+                                e.target.setStyle({ fillOpacity: 0.3, weight: 3 });
+                            },
+                            mouseout: (e) => {
+                                e.target.setStyle({ fillOpacity: 0.1, weight: 2 });
+                            }
+                        });
+                    }
+                }).addTo(map);
+            });
+
+        // Updated Search Logic
         document.getElementById('countyInput').addEventListener('input', (e) => {
             const val = e.target.value.toLowerCase();
-            if (markers[val]) {
-                const target = markers[val];
-                map.setView(target.getLatLng(), 11);
-                target.openPopup();
+            const layer = countyLayers[val];
+            if (layer) {
+                map.fitBounds(layer.getBounds());
+                layer.openPopup();
             }
         });
-        
+
         setTimeout(() => map.invalidateSize(), 500);
     </script>
 </body>
