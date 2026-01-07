@@ -1,148 +1,65 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>NY Board of Elections Directory</title>
+    <title>NY Board of Elections - County Map</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root {
-            --ny-blue: #003087; /* Official NY Blue */
-            --ny-gold: #f2a900;
-            --accent-blue: #0984e3;
-            --bg-gray: #f8f9fa;
-        }
-
-        body { 
-            margin: 0; 
-            padding: 0; 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            background: var(--bg-gray); 
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Modern Floating Search Bar */
+        body { margin: 0; padding: 0; font-family: sans-serif; background: #f4f7f6; }
+        #map { height: 100vh; width: 100%; z-index: 1; }
+        
         .search-container { 
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-            width: 90%;
-            max-width: 600px;
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%); 
+            z-index: 2000; width: 90%; max-width: 500px; 
         }
-
         input { 
-            width: 100%;
-            padding: 16px 28px; 
-            border-radius: 50px; 
-            border: none;
-            font-size: 16px; 
-            outline: none; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(5px);
-            transition: all 0.3s ease;
+            width: 100%; padding: 15px 25px; border-radius: 30px; border: 1px solid #ccc;
+            font-size: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); outline: none;
         }
 
-        input:focus {
-            box-shadow: 0 4px 25px rgba(9, 132, 227, 0.3);
-            background: #fff;
-        }
+        .popup-card { min-width: 300px; font-size: 13px; color: #2d3436; }
+        .popup-card h3 { margin: 0 0 10px; color: #003087; border-bottom: 2px solid #eee; padding-bottom: 5px; }
+        .d-blue { color: #0984e3; font-weight: bold; }
+        .r-red { color: #d63031; font-weight: bold; }
+        .staff-box { background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 5px; border-left: 3px solid #003087; }
 
-        #map { 
-            flex-grow: 1;
-            width: 100%; 
-        }
-
-        /* Clean Popup Styling */
-        .leaflet-popup-content-wrapper {
-            border-radius: 12px;
-            padding: 5px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-
-        .popup-card { 
-            min-width: 300px; 
-            font-size: 14px; 
-            line-height: 1.5; 
-            color: #2d3436;
-        }
-
-        .popup-card h3 { 
-            margin: 0 0 12px; 
-            color: var(--ny-blue); 
-            font-size: 20px;
-            border-bottom: 2px solid #edf2f7;
-            padding-bottom: 8px;
-        }
-
-        .section-header { 
-            font-weight: 800; 
-            margin-top: 12px; 
-            display: block; 
-            text-transform: uppercase; 
-            font-size: 10px; 
-            letter-spacing: 1px;
-            color: #a0aec0; 
-        }
-
-        .party-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px;
-            padding: 4px 0;
-        }
-
-        .d-party { color: #2b6cb0; font-weight: 600; }
-        .r-party { color: #c53030; font-weight: 600; }
-
-        .staff-box { 
-            background: #f7fafc; 
-            padding: 10px; 
-            border-radius: 8px; 
-            margin-top: 8px; 
-            font-size: 12px; 
-            border: 1px solid #e2e8f0;
-            color: #4a5568;
-        }
-
-        .contact-info {
-            margin-top: 15px;
-            padding-top: 10px;
-            border-top: 1px dashed #cbd5e0;
-            font-weight: 500;
-        }
-
-        /* Map Attribution Tweak */
-        .leaflet-control-attribution { font-size: 9px !important; }
+        /* Forces the mouse cursor to be a pointer over the counties */
+        .leaflet-interactive { cursor: pointer !important; }
     </style>
 </head>
 <body>
 
     <div class="search-container">
-        <input type="text" id="countyInput" placeholder="🔍 Find your county (e.g. Westchester, Kings, Onondaga)...">
+        <input type="text" id="countyInput" placeholder="🔍 Search or Click any NY County...">
     </div>
 
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Directory Data
+        const map = L.map('map', { zoomControl: false }).setView([42.9, -75.6], 7);
+        
+        // Using a base map that includes labels
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; CartoDB'
+        }).addTo(map);
+
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        // Your County Data
         const fullData = [
             { n: "Albany", addr: "224 S. Pearl St, Albany", ph: "(518) 487-5060", d: "Alison C. McLean Lane", r: "Rachel L. Bledi", depD: "David J. Cady", depR: "Melissa Kermani", staff: "Debora Banks-Turner (R) Administrator" },
             { n: "Allegany", addr: "8 Willets Avenue, Belmont", ph: "(585) 268-9294", d: "Michael J. McCormick", r: "Brent L. Reynolds", depD: "Barbara Broughton", depR: "Marcy Crawford", staff: "" },
             { n: "Bronx", addr: "1780 Grand Concourse", ph: "(718) 299-9017", d: "Jodi Morales", r: "Gino A. Marmorato", depD: "Brendaliz Candelaria", depR: "Steven Guglielmi", staff: "Deputy Chief Clerks: (718) 960-0730" },
-            { n: "Broome", addr: "60 Hawley St, Binghamton", ph: "(607) 778-2172", d: "Daniel D. Reynolds", r: "Mark E. Smith", depD: "Christina M. Dutko", depR: "Joseph J. Bertoni", staff: "Tech: J. MacGregor, P. Conroy; Ops: L. Cobb, S. Mandizha" },
-            { n: "Cattaraugus", addr: "207 Rock City St, Little Valley", ph: "(716) 938-2400", d: "Kevin C. Burleson", r: "Cortney L. Spittler", depD: "Laura D. Howard", depR: "Danielle R. Wing", staff: "Clerks: Colleen D. Stayer, Mandy Bushnell" },
-            { n: "Cayuga", addr: "157 Genesee St, Auburn", ph: "(315) 253-1285", d: "Keith Batman (D)", r: "Chantell Hotaling (R)", depD: "Katie Trojnor-Riley", depR: "Roberta Massarini", staff: "Email: elections@cayugacounty.gov" },
-            { n: "Chautauqua", addr: "7 North Erie St, Mayville", ph: "(716) 753-4580", d: "Luz E. Torres", r: "Nacole L. Ellis", depD: "Christopher Burt", depR: "Natalie Green", staff: "Admins: Sarah Culver, Amber Eckstrom, Amanda Fox" },
-            { n: "Chemung", addr: "378 S. Main St, Elmira", ph: "(607) 737-5475", d: "Mary M. Collins", r: "Sperry J. Navone", depD: "Tina M. Kane", depR: "Marcy M. Thomas", staff: "Admin Specs: Halie D. Saunders, Colleen P. Novotny" },
-            { n: "Chenango", addr: "5 Court St, Norwich", ph: "(607) 337-1764", d: "Carly J. Hendricks", r: "Derik M. Williams", depD: "Ryan Hitt", depR: "Kelsey Natoli", staff: "Sr Clerk: Jacob Carniel" },
-            { n: "Clinton", addr: "137 Margaret St, Plattsburgh", ph: "(518) 565-4740", d: "Mary R. Dyer", r: "David J. Souliere IV", depD: "Melinda Guerin", depR: "Scott A. DuBrey", staff: "Email: boe@clintoncountyny.gov" },
-            { n: "Columbia", addr: "401 State St, Hudson", ph: "(518) 828-3115", d: "Mara H. Estribou", r: "Kelly A. Miller-Simmons", depD: "Denise Keegan", depR: "Jody Nesbitt", staff: "Specs: W. Blowers, J. Ciampoli, B. Slotter" },
+            { n: "Broome", addr: "60 Hawley St, Binghamton", ph: "(607) 778-2172", d: "Daniel D. Reynolds", r: "Mark E. Smith", depD: "Christina M. Dutko", depR: "Joseph J. Bertoni", staff: "" },
+            { n: "Cattaraugus", addr: "207 Rock City St, Little Valley", ph: "(716) 938-2400", d: "Kevin C. Burleson", r: "Cortney L. Spittler", depD: "Laura D. Howard", depR: "Danielle R. Wing", staff: "" },
+            { n: "Cayuga", addr: "157 Genesee St, Auburn", ph: "(315) 253-1285", d: "Keith Batman (D)", r: "Chantell Hotaling (R)", depD: "Katie Trojnor-Riley", depR: "Roberta Massarini", staff: "" },
+            { n: "Chautauqua", addr: "7 North Erie St, Mayville", ph: "(716) 753-4580", d: "Luz E. Torres", r: "Nacole L. Ellis", depD: "Christopher Burt", depR: "Natalie Green", staff: "" },
+            { n: "Chemung", addr: "378 S. Main St, Elmira", ph: "(607) 737-5475", d: "Mary M. Collins", r: "Sperry J. Navone", depD: "Tina M. Kane", depR: "Marcy M. Thomas", staff: "" },
+            { n: "Chenango", addr: "5 Court St, Norwich", ph: "(607) 337-1764", d: "Carly J. Hendricks", r: "Derik M. Williams", depD: "Ryan Hitt", depR: "Kelsey Natoli", staff: "" },
+            { n: "Clinton", addr: "137 Margaret St, Plattsburgh", ph: "(518) 565-4740", d: "Mary R. Dyer", r: "David J. Souliere IV", depD: "Melinda Guerin", depR: "Scott A. DuBrey", staff: "" },
+            { n: "Columbia", addr: "401 State St, Hudson", ph: "(518) 828-3115", d: "Mara H. Estribou", r: "Kelly A. Miller-Simmons", depD: "Denise Keegan", depR: "Jody Nesbitt", staff: "" },
             { n: "Cortland", addr: "112 River St, Cortland", ph: "(607) 753-5032", d: "Thomas H. Brown", r: "Michelle S. Phelps", depD: "Angela 1. Burchfield", depR: "Karen A.C. Jenney", staff: "" },
             { n: "Delaware", addr: "97 Main St, Delhi", ph: "(607) 832-5321", d: "Judith L. Garrison", r: "Maria E. Kelso", depD: "Paula Schermerhorn", depR: "Christine Boest", staff: "" },
             { n: "Dutchess", addr: "112 Delafield St, Poughkeepsie", ph: "(845) 486-2473", d: "Lisa Jessup", r: "Erik J. Haight", depD: "Gillian Smith", depR: "Erin E. Reverri", staff: "" },
@@ -152,7 +69,7 @@
             { n: "Fulton", addr: "2714 St. Hwy 29, Johnstown", ph: "(518) 736-5526", d: "Robin Wentworth", r: "William E. Eschler", depD: "Rebecca Weiderman", depR: "Cinda J. Spraker", staff: "" },
             { n: "Genesee", addr: "15 Main St, Batavia", ph: "(585) 815-7804", d: "Lorie J. Longhany", r: "Scott D. German", depD: "Karen S. Gannon", depR: "Melissa L. Gaebler", staff: "" },
             { n: "Greene", addr: "411 Main St, Catskill", ph: "(518) 719-3550", d: "Deborah A. Fromer", r: "Brent Bogardus", depD: "Rebecca Cinatti", depR: "Elisa Schieren", staff: "" },
-            { n: "Hamilton", addr: "102 County View Dr", ph: "(518) 548-4684", d: "Jade Sherman", r: "Gail P. Teal", depD: "", depR: "", staff: "" },
+            { n: "Hamilton", addr: "102 County View Dr", ph: "(518) 548-4684", d: "Jade Sherman", r: "Gail P. Teal", depD: "N/A", depR: "N/A", staff: "" },
             { n: "Herkimer", addr: "109 Mary St, Herkimer", ph: "(315) 867-1102", d: "Robert J. Hoyt", r: "Teresa L. Robotham", depD: "Jon Karaffa", depR: "Cody Keeler", staff: "" },
             { n: "Jefferson", addr: "175 Arsenal St, Watertown", ph: "(315) 785-3027", d: "Michelle R. LaFave", r: "Tiffany E. Ladd", depD: "Tammy Gollaher", depR: "Heather Chaffee", staff: "" },
             { n: "Kings", addr: "345 Adams St, Brooklyn", ph: "(718) 797-8800", d: "Frank R. Seddio", r: "Simon Shamoun", depD: "Daniel Ortiz", depR: "Salvatore Barrera", staff: "" },
@@ -161,9 +78,9 @@
             { n: "Madison", addr: "138 N. Court St, Wampsville", ph: "(315) 366-2231", d: "Laura A. Martino", r: "Mary F. Egger", depD: "Maggie D. Conley", depR: "Kathy R. Slade", staff: "" },
             { n: "Monroe", addr: "435 Smith St, Rochester", ph: "(585) 753-1550", d: "Jackie Ortiz", r: "Peter D. Elder", depD: "Natalie Sheppard", depR: "David W. Reilich", staff: "" },
             { n: "Montgomery", addr: "9 Park St, Fonda", ph: "(518) 853-8181", d: "Caroline A. Swartz", r: "Shawnna M. Weaver", depD: "Jessica Daniels", depR: "Violet Capece", staff: "" },
-            { n: "Nassau", addr: "240 Old Country Rd, Mineola", ph: "(516) 571-8683", d: "James P. Scheuerman", r: "James V. Moriarty", depD: "", depR: "", staff: "" },
+            { n: "Nassau", addr: "240 Old Country Rd, Mineola", ph: "(516) 571-8683", d: "James P. Scheuerman", r: "James V. Moriarty", depD: "N/A", depR: "N/A", staff: "" },
             { n: "New York", addr: "200 Varick St, New York", ph: "(212) 886-2100", d: "Marc A. Landis", r: "Frederic M. Umane", depD: "Rhonda Evans", depR: "Stephen M. Evans, III", staff: "" },
-            { n: "Niagara", addr: "111 Main St, Lockport", ph: "(716) 438-4040", d: "Lora A. Allen", r: "Jennifer A. Sandonato", depD: "", depR: "Michael P. Carney", staff: "" },
+            { n: "Niagara", addr: "111 Main St, Lockport", ph: "(716) 438-4040", d: "Lora A. Allen", r: "Jennifer A. Sandonato", depD: "N/A", depR: "Michael P. Carney", staff: "" },
             { n: "Oneida", addr: "321 Main St, Utica", ph: "(315) 798-5765", d: "Sarah F. Bormann", r: "Nichole D. Shortell", depD: "Clarence A. Farrier", depR: "Sharie Fiorini-Parsons", staff: "" },
             { n: "Onondaga", addr: "1000 Erie Blvd W, Syracuse", ph: "(315) 435-8683", d: "Dustin M. Czarny", r: "Kevin P. Ryan", depD: "Desiree LaFave", depR: "Nicole Walsh", staff: "" },
             { n: "Ontario", addr: "74 Ontario St, Canandaigua", ph: "(585) 396-4005", d: "Albert J. (AJ) Magnan", r: "Adeline C. Rudolph", depD: "Elizabeth J. Yockel", depR: "Sarabeth Miller", staff: "" },
@@ -196,31 +113,20 @@
             { n: "Yates", addr: "417 Liberty St, Penn Yan", ph: "(315) 536-5135", d: "Robert F. Brechko", r: "Sheila M. Burt", depD: "Ruth (Toad) Bouchard", depR: "Sandy J. Burt", staff: "" }
         ];
 
-        // 1. Initialize Map with a cleaner, lighter theme (CartoDB Positron)
-        const map = L.map('map', {
-            zoomControl: false // Move zoom later
-        }).setView([42.9, -75.6], 7);
-        
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; CartoDB'
-        }).addTo(map);
-
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
-
         const countyLayers = {}; 
 
-        // 2. Fetch Boundaries
+        // 3. Fetch Boundaries
         fetch("https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/new-york-counties.geojson")
             .then(res => res.json())
             .then(geoData => {
                 L.geoJSON(geoData, {
+                    // Filter out center points, only keep shapes
                     filter: (f) => f.geometry.type !== 'Point',
                     style: {
-                        color: "#003087", // NY Blue
+                        color: "#003087",
                         weight: 1.5,
                         fillColor: "#0984e3",
-                        fillOpacity: 0.1,
-                        className: 'county-polygon'
+                        fillOpacity: 0.1 // Keeping it very light so names show through
                     },
                     onEachFeature: function(feature, layer) {
                         const cName = feature.properties.name;
@@ -230,46 +136,33 @@
                             layer.bindPopup(`
                                 <div class="popup-card">
                                     <h3>${item.n} County</h3>
-                                    <span class="section-header">Commissioners</span>
-                                    <div class="party-row"><span class="d-party">DEM</span> <span>${item.d}</span></div>
-                                    <div class="party-row"><span class="r-party">REP</span> <span>${item.r}</span></div>
-                                    
-                                    <span class="section-header">Deputies</span>
-                                    <div class="party-row"><span class="d-party">DEM</span> <span>${item.depD || 'N/A'}</span></div>
-                                    <div class="party-row"><span class="r-party">REP</span> <span>${item.depR || 'N/A'}</span></div>
-                                    
-                                    ${item.staff ? `<div class="staff-box"><strong>Staff Notes:</strong> ${item.staff}</div>` : ''}
-                                    
-                                    <div class="contact-info">
-                                        📍 ${item.addr}<br>
-                                        📞 ${item.ph}
-                                    </div>
+                                    <span class="d-blue">DEM:</span> ${item.d}<br>
+                                    <span class="r-red">REP:</span> ${item.r}<hr>
+                                    📍 ${item.addr}<br>📞 ${item.ph}
                                 </div>
                             `);
                             countyLayers[cName.toLowerCase()] = layer;
                         }
 
-                        // Hover Interaction
+                        // IMPORTANT: Force the layer to be interactive
                         layer.on({
-                            mouseover: (e) => {
-                                let l = e.target;
-                                l.setStyle({ fillOpacity: 0.3, weight: 3, fillColor: '#003087' });
-                                l.bringToFront();
-                            },
-                            mouseout: (e) => {
-                                e.target.setStyle({ fillOpacity: 0.1, weight: 1.5, fillColor: '#0984e3' });
+                            mouseover: (e) => e.target.setStyle({ fillOpacity: 0.4 }),
+                            mouseout: (e) => e.target.setStyle({ fillOpacity: 0.1 }),
+                            click: (e) => {
+                                map.fitBounds(e.target.getBounds());
+                                e.target.openPopup();
                             }
                         });
                     }
                 }).addTo(map);
             });
 
-        // 3. Search Logic
+        // 4. Search Handler
         document.getElementById('countyInput').addEventListener('input', (e) => {
             const val = e.target.value.toLowerCase().trim();
             const layer = countyLayers[val];
             if (layer) {
-                map.fitBounds(layer.getBounds(), { padding: [50, 50] });
+                map.fitBounds(layer.getBounds());
                 layer.openPopup();
             }
         });
